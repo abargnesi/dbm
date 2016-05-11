@@ -1,7 +1,12 @@
-dbm-mapdb3
-==========
+## dbm-mapdb3
 
-This is a fork of [jruby/dbm][jruby/dbm] that uses MapDB 3.
+#### overview
+
+This is a fork of [jruby/dbm][jruby/dbm] that uses MapDB 3. This work intends to make MapDB 3 a good choice to implement the DBM abstraction in a JRuby environment.
+
+MapDB 3.0.0 is in beta so this gem is also beta.
+
+#### usage
 
 It provides a DBM interface (using MapDB) for use in JRuby.
 

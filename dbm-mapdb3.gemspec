@@ -19,7 +19,7 @@ Gem::Specification.new do |s|
   s.authors     = ['Anthony Bargnesi']
   s.email       = ['abargnesi@gmail.com']
   s.homepage    = 'http://github.com/abargnesi/dbm-mapdb3'
-  s.summary     = %q{DBM extension}
+  s.summary     = %q{DBM extension; fork of jruby/dbm}
   s.description = %q{DBM extension using MapDB version 3.}
   s.files         = files
   s.test_files    = `git ls-files -- spec/*`.split("\n")

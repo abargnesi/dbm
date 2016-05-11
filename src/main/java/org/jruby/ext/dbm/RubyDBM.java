@@ -52,6 +52,7 @@ import org.jruby.runtime.builtin.IRubyObject;
 import org.jruby.util.io.ModeFlags;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
+import org.mapdb.serializer.GroupSerializer;
 
 /**
  *
@@ -167,14 +168,14 @@ public class RubyDBM extends RubyObject {
         }
         
         if ((openFlags & ModeFlags.TRUNC) != 0) truncate(dbFile);
-        
-        DBMaker maker = DBMaker.newFileDB(dbFile).closeOnJvmShutdown();
+
+        DBMaker.Maker maker = DBMaker.fileDB(dbFile).closeOnJvmShutdown();
 
         // If explicitly request as read-only or file mode is not writable open in read-only mode.
         if (openFlags == READER || (dbFile.exists() && !dbFile.canWrite())) maker = maker.readOnly();
         
         db = maker.make();
-        map = db.getTreeMap("");
+        map = db.treeMap("", GroupSerializer.STRING, GroupSerializer.STRING).make();
         
         return this;
     }
@@ -509,7 +510,7 @@ public class RubyDBM extends RubyObject {
     }
     
     private boolean isReadOnly() {
-        return db.getEngine().isReadOnly();
+        return db.getStore().isReadOnly();
     }
 
     private void truncate(File file) {

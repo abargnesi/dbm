@@ -12,14 +12,14 @@ files << 'lib/dbm.jar'
 files << 'lib/mapdb.jar'
 
 Gem::Specification.new do |s|
-  s.name        = 'dbm'
+  s.name        = 'dbm-mapdb3'
   s.version     = DBM_VERSION
   s.platform    = Gem::Platform::RUBY
-  s.authors     = 'Thomas E. Enebo'
-  s.email       = 'tom.enebo@gmail.com'
-  s.homepage    = 'http://github.com/jruby/dbm'
-  s.summary     = %q{DBM extension}
-  s.description = %q{DBM extension}
+  s.authors     = ['Thomas E. Enebo', 'Anthony Bargnesi']
+  s.email       = ['tom.enebo@gmail.com', 'abargnesi@gmail.com']
+  s.homepage    = 'http://github.com/abargnesi/dbm-mapdb3'
+  s.summary     = %q{DBM extension using MapDB version 3.}
+  s.description = %q{DBM extension using MapDB version 3.}
   s.files         = files
   s.test_files    = `git ls-files -- spec/*`.split("\n")
   s.require_paths = ["lib"]

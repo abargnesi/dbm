@@ -236,8 +236,7 @@ public class RubyDBM extends RubyObject {
         ensureNotFrozen(context);
         
         store(context, key, value);
-        db.commit();
-        
+
         return value;
     }
     
@@ -369,7 +368,6 @@ public class RubyDBM extends RubyObject {
         if (pair == null) return context.runtime.getNil();
         
         remove(context, pair.getKey());
-        db.commit();
 
         return context.runtime.newArray(rstr(context, pair.getKey()), rstr(context, pair.getValue()));
     }
@@ -384,7 +382,6 @@ public class RubyDBM extends RubyObject {
         if (value == null) return block.isGiven() ? block.yieldSpecific(context, key) : context.runtime.getNil();
         
         remove(context, str(context, key));
-        db.commit();
 
         return rstr(context, value);
     }
@@ -400,8 +397,7 @@ public class RubyDBM extends RubyObject {
             
             if (block.yieldSpecific(context, rkey, rvalue).isTrue()) remove(context, key);
         }
-        db.commit();
-        
+
         return this;
     }
     
@@ -416,8 +412,7 @@ public class RubyDBM extends RubyObject {
         ensureNotFrozen(context);
         
         map.clear();
-        db.commit();
-        
+
         return this;
     }
     

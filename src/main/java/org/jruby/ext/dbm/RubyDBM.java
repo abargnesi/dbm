@@ -33,7 +33,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentNavigableMap;
 import org.jruby.Ruby;
 import org.jruby.RubyArray;
 import org.jruby.RubyClass;
@@ -50,6 +49,7 @@ import org.jruby.runtime.ObjectAllocator;
 import org.jruby.runtime.ThreadContext;
 import org.jruby.runtime.builtin.IRubyObject;
 import org.jruby.util.io.ModeFlags;
+import org.mapdb.BTreeMap;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
 import org.mapdb.serializer.GroupSerializer;
@@ -68,7 +68,7 @@ public class RubyDBM extends RubyObject {
     private static final RuntimeException NIL_HACK_EXCEPTION = new RuntimeException();
     
     private DB db = null;
-    private ConcurrentNavigableMap<String, String> map = null;
+    private BTreeMap<String, String> map = null;
     
     public static void initDBM(Ruby runtime) {
         RubyClass dbm = runtime.defineClass("DBM", runtime.getObject(), new ObjectAllocator() {
@@ -169,14 +169,18 @@ public class RubyDBM extends RubyObject {
         
         if ((openFlags & ModeFlags.TRUNC) != 0) truncate(dbFile);
 
-        DBMaker.Maker maker = DBMaker.fileDB(dbFile).closeOnJvmShutdown();
+        int concurrency = Runtime.getRuntime().availableProcessors();
+        DBMaker.Maker maker = DBMaker.fileDB(dbFile)
+                .concurrencyScale(concurrency)
+                .fileMmapEnableIfSupported()
+                .closeOnJvmShutdown();
 
         // If explicitly request as read-only or file mode is not writable open in read-only mode.
         if (openFlags == READER || (dbFile.exists() && !dbFile.canWrite())) maker = maker.readOnly();
         
         db = maker.make();
         map = db.treeMap("", GroupSerializer.STRING, GroupSerializer.STRING).make();
-        
+
         return this;
     }
     
@@ -248,8 +252,8 @@ public class RubyDBM extends RubyObject {
     public IRubyObject key(ThreadContext context, IRubyObject value) {
         ensureDBOpen(context);
         String valueString = str(context, value);
-        
-        for (String key : map.keySet()) {
+
+        for (String key : map.navigableKeySet()) {
             if (valueString.equals(map.get(key))) return context.runtime.newString(key);
         }
         
@@ -261,7 +265,7 @@ public class RubyDBM extends RubyObject {
         ensureDBOpen(context);
         RubyArray array = context.runtime.newArray();
         
-        for (String key : map.keySet()) {
+        for (String key : map.navigableKeySet()) {
             IRubyObject rkey = rstr(context, key);
             IRubyObject rvalue = rstr(context, map.get(key));
             
@@ -300,7 +304,7 @@ public class RubyDBM extends RubyObject {
         ensureDBOpen(context);
         if (!block.isGiven()) return RubyEnumerator.enumeratorize(context.runtime, this, "each");
         
-        for (String key: map.keySet()) {
+        for (String key: map.navigableKeySet()) {
             block.yieldSpecific(context, rstr(context, key), rstr(context, map.get(key)));
         }
         
@@ -312,7 +316,7 @@ public class RubyDBM extends RubyObject {
         ensureDBOpen(context);
         if (!block.isGiven()) return RubyEnumerator.enumeratorize(context.runtime, this, "each_value");
         
-        for (String key: map.keySet()) {
+        for (String key: map.navigableKeySet()) {
             block.yieldSpecific(context, rstr(context, map.get(key)));
         }
         
@@ -324,7 +328,7 @@ public class RubyDBM extends RubyObject {
         ensureDBOpen(context);
         if (!block.isGiven()) return RubyEnumerator.enumeratorize(context.runtime, this, "each_key");
         
-        for (String key: map.keySet()) {
+        for (String key: map.navigableKeySet()) {
             block.yieldSpecific(context, rstr(context, key));
         }
         
@@ -336,7 +340,7 @@ public class RubyDBM extends RubyObject {
         ensureDBOpen(context);
         RubyArray array = context.runtime.newArray();
         
-        for (String key : map.keySet()) {
+        for (String key : map.navigableKeySet()) {
             array.append(rstr(context, key));
         }
         
@@ -348,7 +352,7 @@ public class RubyDBM extends RubyObject {
         ensureDBOpen(context);
         RubyArray array = context.runtime.newArray();
         
-        for (String key : map.keySet()) {
+        for (String key : map.navigableKeySet()) {
             array.append(rstr(context, map.get(key)));
         }
         
@@ -390,7 +394,7 @@ public class RubyDBM extends RubyObject {
         ensureDBOpen(context);
         ensureNotFrozen(context);
         
-        for (String key : map.keySet()) {
+        for (String key : map.navigableKeySet()) {
             IRubyObject rkey = rstr(context, key);
             IRubyObject rvalue = rstr(context, map.get(key));
             
@@ -422,7 +426,7 @@ public class RubyDBM extends RubyObject {
         ensureDBOpen(context);
         RubyHash hash = RubyHash.newHash(context.runtime);
         
-        for (String key : map.keySet()) {
+        for (String key : map.navigableKeySet()) {
             hash.fastASet(rstr(context, map.get(key)), rstr(context, key));
         }        
         
@@ -440,8 +444,9 @@ public class RubyDBM extends RubyObject {
         ensureDBOpen(context);
         String test = str(context, testArg);
         
-        for (String value: map.values()) {
-            if (test.equals(value)) return context.runtime.getTrue();
+        for (Object value: map.values()) {
+            String valueString = (String) value;
+            if (test.equals(valueString)) return context.runtime.getTrue();
         }
         
         return context.runtime.getFalse();
@@ -452,7 +457,7 @@ public class RubyDBM extends RubyObject {
         ensureDBOpen(context);
         RubyArray array = context.runtime.newArray();
         
-        for (String key: map.keySet()) {
+        for (String key: map.navigableKeySet()) {
             array.append(context.runtime.newArray(rstr(context, key), rstr(context, map.get(key))));
         }
         
@@ -464,7 +469,7 @@ public class RubyDBM extends RubyObject {
         ensureDBOpen(context);
         RubyHash hash = RubyHash.newHash(context.runtime);
         
-        for (String key: map.keySet()) {
+        for (String key: map.navigableKeySet()) {
             hash.fastASet(rstr(context, key), rstr(context, map.get(key)));
         }
         

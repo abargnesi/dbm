@@ -16,8 +16,8 @@ Gem::Specification.new do |s|
   s.version     = DBM_VERSION
   s.platform    = Gem::Platform::RUBY
   s.licenses    = ['EPL-1.0', 'GPL-2.0', 'LGPL-2.1']
-  s.authors     = ['Thomas E. Enebo', 'Anthony Bargnesi']
-  s.email       = ['tom.enebo@gmail.com', 'abargnesi@gmail.com']
+  s.authors     = ['Anthony Bargnesi']
+  s.email       = ['abargnesi@gmail.com']
   s.homepage    = 'http://github.com/abargnesi/dbm-mapdb3'
   s.summary     = %q{DBM extension}
   s.description = %q{DBM extension using MapDB version 3.}

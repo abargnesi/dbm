@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.jruby</groupId>
   <artifactId>jruby-dbm</artifactId>
-  <version>0.6.0.beta.1</version>
+  <version>0.6.0.beta.2</version>
   <packaging>jar</packaging>
 
   <name>JRuby DBM</name>
@@ -11,7 +11,7 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <jruby.version>9.1.0.0</jruby.version>
-    <mapdb.version>3.0.0-beta3</mapdb.version>
+    <mapdb.version>3.0.0-beta5</mapdb.version>
     <dbm.dir>lib</dbm.dir>
     <base.java.version>1.8</base.java.version>
     <base.javac.version>1.8</base.javac.version>
@@ -47,27 +47,20 @@
         </configuration>
       </plugin>
       <plugin>
-        <artifactId>maven-dependency-plugin</artifactId>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <version>2.6</version>
+        <configuration>
+          <descriptorRefs>
+            <descriptorRef>jar-with-dependencies</descriptorRef>
+          </descriptorRefs>
+        </configuration>
         <executions>
           <execution>
-            <id>copy mapdb</id>
-            <phase>process-classes</phase>
+            <id>make-assembly</id>
+            <phase>package</phase>
             <goals>
-              <goal>copy</goal>
+              <goal>single</goal>
             </goals>
-            <configuration>
-              <artifactItems>
-                <artifactItem>
-                  <groupId>org.mapdb</groupId>
-                  <artifactId>mapdb</artifactId>
-                  <version>${mapdb.version}</version>
-                  <type>jar</type>
-                  <overWrite>false</overWrite>
-                  <outputDirectory>${dbm.dir}</outputDirectory>
-                  <destFileName>mapdb.jar</destFileName>
-                </artifactItem>
-              </artifactItems>
-            </configuration>
           </execution>
         </executions>
       </plugin>

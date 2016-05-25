@@ -6,3 +6,7 @@
 *.ear
 /target/
 pkg/
+# Project Files #
+*.iml
+*.ipr
+.idea

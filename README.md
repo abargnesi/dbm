@@ -23,4 +23,13 @@ Marshal.load(db['5000']) # => [1, 2, 3, 4, 5]
 db.shift # => ["0", "\u0004\b[\ni\u0006i\ai\bi\ti\n"]
 ```
 
+#### build
+
+First build the java project and copy over the JAR.
+
+- `mvn clean package`
+- `mv target/jruby-dbm-VERSION-jar-with-dependencies.jar lib/dbm.jar`
+- `gem build dbm-mapdb3.gemspec`
+- `gem install dbm-mapdb3-VERSION.gem`
+
 [jruby/dbm]: https://github.com/jruby/dbm

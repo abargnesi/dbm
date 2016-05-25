@@ -9,6 +9,7 @@ DBM_VERSION = REXML::XPath.first(doc, "//project/version").text
 
 files = `git ls-files -- lib/* spec/* sample/*`.split("\n")
 files << 'lib/dbm.jar'
+files << 'README.md'
 
 Gem::Specification.new do |s|
   s.name        = 'dbm-mapdb3'

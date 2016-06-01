@@ -58,15 +58,12 @@ import org.mapdb.serializer.GroupSerializer;
  *
  */
 public class RubyDBM extends RubyObject {
-    private static final int NIL_INSTEAD_OF_ERROR = -1;
-    private static final int DEFAULT_MODE = 0666;
     private static final int RUBY_DBM_RW_BIT = 0x20000000;
     private static final int READER = ModeFlags.RDONLY | RUBY_DBM_RW_BIT;
     private static final int WRITER = ModeFlags.RDWR | RUBY_DBM_RW_BIT;
     private static final int WRCREAT = ModeFlags.RDWR | ModeFlags.CREAT | RUBY_DBM_RW_BIT;
     private static final int NEWDB = ModeFlags.RDWR | ModeFlags.CREAT | ModeFlags.TRUNC | RUBY_DBM_RW_BIT;
-    private static final RuntimeException NIL_HACK_EXCEPTION = new RuntimeException();
-    
+
     private DB db = null;
     private BTreeMap<String, String> map = null;
     
@@ -96,94 +93,22 @@ public class RubyDBM extends RubyObject {
         super(runtime, klazz);
     }
     
-    // The need for 'nil' mode to return nil from new/open on error requires defining an explicit new method
-    @JRubyMethod(meta = true, name = "new", required = 1, optional = 2)
-    public static IRubyObject _new(ThreadContext context, IRubyObject recv, IRubyObject[] args) {
-        switch (args.length) {
-            case 1: return open(context, recv, args[0], Block.NULL_BLOCK);
-            case 2: return open(context, recv, args[0], args[1], Block.NULL_BLOCK);
-        }
-        return open(context, recv, args[0], args[1], args[2], Block.NULL_BLOCK); // 3 args
-    }
-    
-    @JRubyMethod(meta = true)
-    public static IRubyObject open(ThreadContext context, IRubyObject recv, IRubyObject filename, Block block) {
-        return open(context, recv, filename, context.runtime.newFixnum(DEFAULT_MODE), block);
-    }
-    
-    @JRubyMethod(meta = true)
-    public static IRubyObject open(ThreadContext context, IRubyObject recv, IRubyObject filename, IRubyObject mode, Block block) {
-        return open(context, recv, filename, mode, context.runtime.getNil(), block);
-    }
-    
-    @JRubyMethod(meta = true)
-    public static IRubyObject open(ThreadContext context, IRubyObject recv, IRubyObject filename, IRubyObject mode, IRubyObject flags, Block block) {
-        RubyDBM dbm;
-        
-        try {
-            dbm = (RubyDBM) ((RubyClass) recv).newInstance(context, filename, mode, flags, block);
-        } catch (RuntimeException e) { // by-pass allocator logic which always will return new instance.
-            if (e == NIL_HACK_EXCEPTION) return context.runtime.getNil();
-            throw e;
-        }
-        
-        if (block.isGiven()) {
-            IRubyObject result = block.yieldSpecific(context, dbm);
-            
-            dbm.close(context);
-            
-            return result;
-        }
-
-        return dbm;
-    }
-    
     @JRubyMethod
-    public IRubyObject initialize(ThreadContext context, IRubyObject filename) {
-        return initialize(context, filename, context.runtime.newFixnum(DEFAULT_MODE));
-    }
-    
-    @JRubyMethod
-    public IRubyObject initialize(ThreadContext context, IRubyObject filename, IRubyObject mode) {
-        return initialize(context, filename, mode, context.runtime.getNil());
-    }
-    
-    @JRubyMethod
-    public IRubyObject initialize(ThreadContext context, IRubyObject filename, IRubyObject modeArg, IRubyObject flagsArg) {
-        int mode = modeArg.isNil() ? NIL_INSTEAD_OF_ERROR : RubyNumeric.num2int(modeArg);
-        int openFlags = flagsArg.isNil() ? 0 : RubyNumeric.num2int(flagsArg);
-        String file = RubyFile.get_path(context, filename).asJavaString();
-        File dbFile = new File(file);
-        
-        // Only if default flag value or explicit IO::RDONLY passed in we need an early check since RDONLY is 0.
-        if (mode == NIL_INSTEAD_OF_ERROR && openFlags == 0 && !dbFile.exists()) throw NIL_HACK_EXCEPTION;
-        
-        if (openFlags == 0) openFlags = WRCREAT;
-        
-        // We handle as much as we can before passing to underlying db for flags.
-        if ((openFlags & ModeFlags.CREAT) == 0 && !dbFile.exists()) {
-            if (mode == NIL_INSTEAD_OF_ERROR) throw NIL_HACK_EXCEPTION;
-            
-            throw context.runtime.newErrnoENOENTError();
-        }
-        
-        if ((openFlags & ModeFlags.TRUNC) != 0) truncate(dbFile);
-
+    public IRubyObject initialize(ThreadContext context) {
         int concurrency = Runtime.getRuntime().availableProcessors();
-        DBMaker.Maker maker = DBMaker.fileDB(dbFile)
+        DBMaker.Maker maker = DBMaker.tempFileDB()
                 .concurrencyScale(concurrency)
                 .fileMmapEnableIfSupported()
-                .closeOnJvmShutdown();
+                .transactionEnable()
+                .allocateStartSize(2 * 1024 * 1024)
+                .allocateIncrement(2 * 1024 * 1024)
+                .closeOnJvmShutdownWeakReference();
 
-        // If explicitly request as read-only or file mode is not writable open in read-only mode.
-        if (openFlags == READER || (dbFile.exists() && !dbFile.canWrite())) maker = maker.readOnly();
-        
         db = maker.make();
         map = db.treeMap("", GroupSerializer.STRING, GroupSerializer.STRING).make();
-
         return this;
     }
-    
+
     @JRubyMethod
     public IRubyObject close(ThreadContext context) {
         ensureDBOpen(context);
